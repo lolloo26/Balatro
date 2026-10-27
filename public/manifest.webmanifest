@@ -1,0 +1,16 @@
+{
+  "name": "Seme e Fiori",
+  "short_name": "Seme e Fiori",
+  "description": "Un roguelike di carte accessibile, giocabile da tastiera.",
+  "display": "standalone",
+  "scope": "./",
+  "start_url": "./",
+  "icons": [
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

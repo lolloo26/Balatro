@@ -1,0 +1,57 @@
+@import './app/app.css';
+
+:root {
+  color-scheme: dark;
+  --ink: #102019;
+  --surface: #192821;
+  --line: #35473c;
+  --text: #f7f5ec;
+  --muted: #b9c4ba;
+  --gold: #f5c85f;
+  --body-font: 'Trebuchet MS', 'Segoe UI', sans-serif;
+  --display-font: 'Trebuchet MS', 'Segoe UI', sans-serif;
+  font-family: var(--body-font);
+  background: var(--ink);
+  color: var(--text);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  width: 100%;
+  min-height: 100%;
+  background: var(--ink);
+}
+
+body {
+  width: 100%;
+  min-height: 100vh;
+  margin: 0;
+  background:
+    radial-gradient(ellipse at 50% -18%, rgb(65 113 85 / 27%), transparent 47%), var(--ink);
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+:focus-visible {
+  outline: 3px solid #ffe08a;
+  outline-offset: 4px;
+}
+
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+::selection {
+  background: #f5c85f;
+  color: #102019;
+}

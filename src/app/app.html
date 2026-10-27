@@ -1,0 +1,509 @@
+<div class="page-shell">
+  <header class="topbar">
+    <a class="brand" href="./" aria-label="Seme e Fiori, pagina iniziale">
+      <span class="brand-mark" aria-hidden="true">✿</span>
+      <span>SEME <span class="brand-amp">&</span> FIORI</span>
+    </a>
+    <div class="topbar-actions">
+      <span class="edition-label">GIOCO DI CARTE ROGUELIKE</span>
+      @if (state().phase !== 'ready' && !showMainMenu()) {
+        <button class="button button-new-game" type="button" (click)="returnToMainMenu()">
+          <span aria-hidden="true">⌂</span> Menu principale
+        </button>
+      }
+      <button class="button button-help" type="button" aria-keyshortcuts="?" (click)="openHelp()">
+        <span aria-hidden="true">?</span> Aiuto
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <p class="visually-hidden" role="status" aria-live="polite" aria-atomic="true">
+      {{ state().announcement }}
+    </p>
+    @if (storageNotice()) {
+      <p class="storage-warning" role="alert">{{ storageNotice() }}</p>
+    }
+
+    @if (state().phase === 'ready' || showMainMenu()) {
+      <div class="home-screen">
+        <section class="welcome-panel" aria-labelledby="phase-heading">
+          <p class="garden-bloom" aria-hidden="true">✿</p>
+          <p class="eyebrow">IL TUO GIARDINO DI CARTE</p>
+          <h1 #phaseHeading id="phase-heading" tabindex="-1">Ogni mano mette radici.</h1>
+          <p class="welcome-copy">
+            Crea combinazioni, supera otto ante sempre più difficili e trova i jolly giusti per far
+            sbocciare la tua partita.
+          </p>
+          <div class="welcome-suits" aria-label="I quattro semi: cuori, quadri, fiori e picche">
+            <span class="suit-hearts" aria-hidden="true">♥</span>
+            <span class="suit-diamonds" aria-hidden="true">♦</span>
+            <span class="suit-clubs" aria-hidden="true">♣</span>
+            <span class="suit-spades" aria-hidden="true">♠</span>
+          </div>
+          @if (state().phase === 'ready') {
+            <button
+              class="button button-primary button-large"
+              type="button"
+              (click)="startNewGame()"
+            >
+              Inizia una nuova partita <span aria-hidden="true">→</span>
+            </button>
+          } @else {
+            <div class="home-game-actions">
+              <button
+                class="button button-primary button-large"
+                type="button"
+                (click)="continueGame()"
+              >
+                Continua la partita <span aria-hidden="true">→</span>
+              </button>
+              <button
+                class="button button-new-game button-large"
+                type="button"
+                (click)="startNewGame()"
+              >
+                Nuova partita <span aria-hidden="true">↻</span>
+              </button>
+            </div>
+            <p class="welcome-note">La partita in corso è salvata automaticamente.</p>
+          }
+          <p class="welcome-note">52 carte · 8 ante · 3 bui consecutivi per anta</p>
+        </section>
+        <section class="home-boss-overview" aria-labelledby="boss-overview-heading">
+          <header class="home-boss-header">
+            <p class="eyebrow">OTTO SFIDE IN ARRIVO</p>
+            <h2 id="boss-overview-heading">I boss delle ante</h2>
+            <p>Scopri in anticipo il boss e il suo malus: ogni terzo buio porta una nuova sfida.</p>
+          </header>
+          <div class="home-boss-list">
+            @for (boss of bossOverview; track boss.id) {
+              <article class="home-boss-card">
+                <span class="home-boss-ante">ANTE {{ boss.ante }}</span>
+                <div>
+                  <h3>{{ boss.name }}</h3>
+                  <p>{{ boss.description }}</p>
+                </div>
+              </article>
+            }
+          </div>
+        </section>
+      </div>
+    } @else if (state().phase === 'overview') {
+      <section class="blind-overview" aria-labelledby="phase-heading">
+        <header class="blind-overview-header">
+          <p class="eyebrow">ANTE {{ state().round }} / 8</p>
+          <h1 #phaseHeading id="phase-heading" tabindex="-1">I bui di questa ante</h1>
+          <p>
+            Ecco tutti gli obiettivi in arrivo. I bui si affrontano in ordine: completa quello
+            attivo per sbloccare il successivo.
+          </p>
+        </header>
+
+        <div class="blind-list" aria-label="Obiettivi dei tre bui di questa ante">
+          @for (name of blindNames; track name; let index = $index) {
+            <article
+              class="blind-card"
+              [class.blind-card-active]="index === state().blind"
+              [class.blind-card-complete]="index < state().blind"
+              [class.blind-card-locked]="index > state().blind"
+              [attr.aria-current]="index === state().blind ? 'step' : null"
+            >
+              <span class="blind-number" aria-hidden="true">
+                {{ index === 0 ? '✿' : index === 1 ? '✿✿' : '✿✿✿' }}
+              </span>
+              <p class="blind-status">
+                {{
+                  index < state().blind
+                    ? 'SUPERATO'
+                    : index === state().blind
+                      ? 'PROSSIMO'
+                      : 'IN ATTESA'
+                }}
+              </p>
+              <h2>{{ index === 2 ? bosses[state().round].name : name }}</h2>
+              <div class="blind-goal">
+                <span>Ottieni almeno</span>
+                <strong>{{ blindTargets[state().round][index] }}</strong>
+                <span>punti</span>
+              </div>
+              @if (index === 0) {
+                <p class="blind-description">Il primo obiettivo dell'ante.</p>
+              } @else if (index === 1) {
+                <p class="blind-description">Si sblocca dopo il piccolo buio.</p>
+              } @else {
+                <p class="blind-description">{{ bosses[state().round].description }}</p>
+              }
+              @if (index === state().blind) {
+                <button
+                  class="button button-primary blind-play-button"
+                  type="button"
+                  (click)="startBlind()"
+                >
+                  Gioca
+                  <span class="visually-hidden">
+                    {{ index === 2 ? bosses[state().round].name : name }}
+                  </span>
+                  <span aria-hidden="true">→</span>
+                </button>
+              }
+            </article>
+          }
+        </div>
+        <p class="blind-no-skip">
+          <span aria-hidden="true">✿</span>
+          Nessun buio si può saltare: completa ogni obiettivo per proseguire.
+        </p>
+      </section>
+    } @else if (state().phase === 'playing') {
+      <section class="game-board" aria-labelledby="phase-heading">
+        <div class="round-header">
+          <div>
+            <p class="eyebrow">IL TAVOLO È TUO</p>
+            <h1 #phaseHeading id="phase-heading" tabindex="-1">
+              Anta {{ state().round }}
+              <span class="round-divider">/ 8 · {{ blindLabel(state().blind) }}</span>
+            </h1>
+          </div>
+          <div class="wallet" aria-label="Denaro disponibile">
+            <span class="wallet-icon" aria-hidden="true">$</span>
+            <span>{{ state().money }}</span>
+            <span class="wallet-label">dollari</span>
+          </div>
+        </div>
+
+        @if (activeBoss(); as boss) {
+          <aside class="boss-warning" aria-label="Malus del boss">
+            <span class="boss-warning-icon" aria-hidden="true">!</span>
+            <div>
+              <strong>{{ boss.name }}</strong>
+              <p>{{ boss.description }}</p>
+            </div>
+          </aside>
+        }
+
+        <section class="score-panel" aria-label="Obiettivo e punteggio del buio">
+          <div class="score-copy">
+            <div>
+              <span class="stat-label">{{ blindLabel(state().blind) }} · OBIETTIVO</span>
+              <strong>{{ state().target }}</strong>
+            </div>
+            <div class="score-total">
+              <span class="stat-label">PUNTEGGIO</span>
+              <strong
+                >{{ state().roundScore }} <span>/ {{ state().target }}</span></strong
+              >
+            </div>
+          </div>
+          <progress
+            class="score-progress"
+            [value]="state().roundScore"
+            [max]="state().target"
+            [attr.aria-label]="'Progresso: ' + state().roundScore + ' punti su ' + state().target"
+          ></progress>
+          <div class="round-resources">
+            <span>
+              <span class="resource-icon" aria-hidden="true">✿</span>
+              {{ state().handsLeft }} mani</span
+            >
+            <span
+              ><span class="resource-icon discard-icon" aria-hidden="true">↺</span>
+              {{ state().discardsLeft }} scarti</span
+            >
+          </div>
+        </section>
+
+        @if (state().lastHandName) {
+          <p class="last-result">
+            Ultima mano: <strong>{{ state().lastHandName }}</strong> ·
+            {{ state().lastHandScore }} punti
+          </p>
+        }
+
+        <section class="hand-section" aria-labelledby="hand-heading">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">SCEGLI LE TUE CARTE</p>
+              <h2 id="hand-heading">
+                La tua mano <span>({{ state().selectedIds.length }}/5 selezionate)</span>
+              </h2>
+            </div>
+            <div class="sort-actions" aria-label="Ordina le carte">
+              <button
+                class="button button-quiet"
+                type="button"
+                aria-keyshortcuts="O"
+                (click)="sortHand()"
+              >
+                Ordina per valore <kbd>O</kbd>
+              </button>
+            </div>
+          </div>
+
+          <div
+            class="hand-cards"
+            role="listbox"
+            aria-label="Carte in mano. Usa le frecce per spostarti e spazio per selezionare."
+            aria-multiselectable="true"
+          >
+            @for (card of state().hand; track card.id; let index = $index) {
+              <button
+                #handCard
+                class="playing-card"
+                [class.selected]="isSelected(card)"
+                [class.suit-hearts]="faceOf(card).suit === 'hearts'"
+                [class.suit-diamonds]="faceOf(card).suit === 'diamonds'"
+                [class.suit-clubs]="faceOf(card).suit === 'clubs'"
+                [class.suit-spades]="faceOf(card).suit === 'spades'"
+                type="button"
+                role="option"
+                [attr.data-rank]="faceOf(card).rank"
+                [attr.aria-label]="cardLabel(card)"
+                [attr.aria-selected]="isSelected(card)"
+                [attr.aria-posinset]="index + 1"
+                [attr.aria-setsize]="state().hand.length"
+                [attr.aria-keyshortcuts]="'Space'"
+                [tabIndex]="index === activeCardIndex ? 0 : -1"
+                (click)="toggleCard(card, index)"
+                (keydown)="onCardKeydown($event, index)"
+              >
+                <span class="card-corner">
+                  <span class="card-rank">{{ rankNames[faceOf(card).rank] }}</span>
+                  <span class="card-suit" aria-hidden="true">{{
+                    suitSymbols[faceOf(card).suit]
+                  }}</span>
+                </span>
+                <span class="card-center" aria-hidden="true">{{
+                  suitSymbols[faceOf(card).suit]
+                }}</span>
+                @if (isSelected(card)) {
+                  <span class="selected-check" aria-hidden="true">✓</span>
+                }
+                <span class="visually-hidden">{{ suitNames[faceOf(card).suit] }}</span>
+              </button>
+            }
+          </div>
+          @if (selectedHand(); as preview) {
+            <p
+              class="selection-preview"
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+              [attr.aria-label]="handPreviewDescription(preview)"
+            >
+              <span class="selection-label">COMBINAZIONE SELEZIONATA</span>
+              <strong>{{ preview.name }}</strong>
+              <span
+                >{{ preview.chips }} fiches × {{ preview.multiplier }} =
+                {{ preview.score }} punti</span
+              >
+            </p>
+          } @else {
+            <p class="selection-preview selection-empty" aria-live="polite">
+              Seleziona da 1 a 5 carte per vedere subito la combinazione. La carta più alta è a
+              sinistra, la più bassa a destra.
+            </p>
+          }
+          <p class="selection-hint">Il seme è indicato da colore, simbolo e nome.</p>
+        </section>
+
+        <div class="action-bar">
+          <button
+            class="button button-primary action-button"
+            type="button"
+            [disabled]="state().selectedIds.length === 0"
+            aria-keyshortcuts="D"
+            (click)="playSelectedCards()"
+          >
+            <span class="action-label">Gioca mano</span>
+            <span class="action-count" [attr.aria-label]="state().handsLeft + ' mani rimaste'">
+              {{ state().handsLeft }} <small>mani</small>
+            </span>
+            <kbd>D</kbd>
+          </button>
+          <button
+            class="button button-secondary action-button"
+            type="button"
+            [disabled]="state().selectedIds.length === 0 || state().discardsLeft === 0"
+            aria-keyshortcuts="X"
+            (click)="discardSelectedCards()"
+          >
+            <span class="action-label">Scarta</span>
+            <span class="action-count" [attr.aria-label]="state().discardsLeft + ' scarti rimasti'">
+              {{ state().discardsLeft }} <small>scarti</small>
+            </span>
+            <kbd>X</kbd>
+          </button>
+        </div>
+
+        <section class="jokers-section" aria-labelledby="jokers-heading">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">I TUOI POTERI</p>
+              <h2 id="jokers-heading">
+                Jolly <span>({{ state().jokerIds.length }}/5)</span>
+              </h2>
+            </div>
+          </div>
+          @if (state().jokerIds.length === 0) {
+            <p class="empty-jokers">
+              Ancora nessun jolly: cercane uno nel negozio dopo aver superato l'anta.
+            </p>
+          } @else {
+            <div class="joker-list" aria-label="Jolly posseduti">
+              @for (id of state().jokerIds; track id; let index = $index) {
+                @if (jokerFor(id); as joker) {
+                  <article class="joker-card" [class.joker-disabled]="isJokerDisabled(id, index)">
+                    <span class="joker-flower" aria-hidden="true">✿</span>
+                    <div>
+                      <h3>{{ joker.name }}</h3>
+                      <p>{{ joker.description }}</p>
+                      @if (isJokerDisabled(id, index)) {
+                        <strong class="joker-disabled-label">
+                          {{ disabledJokerReason(id, index) }}
+                        </strong>
+                      }
+                    </div>
+                  </article>
+                }
+              }
+            </div>
+          }
+        </section>
+      </section>
+    } @else if (state().phase === 'shop') {
+      <section class="shop-panel" aria-labelledby="phase-heading">
+        <div class="shop-header">
+          <p class="eyebrow">UNA SOSTA MERITATA</p>
+          <h1 #phaseHeading id="phase-heading" tabindex="-1">
+            Hai superato l'anta {{ state().round }}!
+          </h1>
+          <p>Il tavolo paga: spendi con attenzione e scegli il jolly che farà la differenza.</p>
+          <div class="wallet shop-wallet" aria-label="Denaro disponibile">
+            <span class="wallet-icon" aria-hidden="true">$</span>
+            <span>{{ state().money }}</span
+            ><span class="wallet-label">dollari</span>
+          </div>
+        </div>
+
+        <div class="shop-grid">
+          @for (id of state().shopOffers; track id) {
+            @if (jokerFor(id); as joker) {
+              <article class="shop-card">
+                <span class="shop-flower" aria-hidden="true">✿</span>
+                <p class="eyebrow">JOLLY</p>
+                <h2>{{ joker.name }}</h2>
+                <p class="shop-description">{{ joker.description }}</p>
+                <button
+                  class="button button-buy"
+                  type="button"
+                  [disabled]="state().money < joker.price || state().jokerIds.length >= 5"
+                  [attr.aria-label]="'Acquista ' + joker.name + ' per ' + joker.price + ' dollari'"
+                  (click)="buyJoker(joker.id)"
+                >
+                  Acquista · ${{ joker.price }}
+                </button>
+              </article>
+            }
+          } @empty {
+            <p class="empty-jokers">Hai già collezionato tutti i jolly disponibili.</p>
+          }
+        </div>
+
+        @if (state().jokerIds.length > 0) {
+          <p class="shop-owned">Jolly già raccolti: {{ state().jokerIds.length }} / 5</p>
+        }
+        <button
+          class="button button-primary button-large continue-button"
+          type="button"
+          (click)="continueToNextRound()"
+        >
+          Continua verso l'anta {{ state().round + 1 }} <span aria-hidden="true">→</span>
+        </button>
+      </section>
+    } @else {
+      <section class="ending-panel" aria-labelledby="phase-heading">
+        <p class="ending-symbol" aria-hidden="true">{{ state().phase === 'won' ? '✿' : '❀' }}</p>
+        <p class="eyebrow">
+          {{ state().phase === 'won' ? 'UNA FIORITURA LEGGENDARIA' : 'IL MAZZO SI FERMA QUI' }}
+        </p>
+        <h1 #phaseHeading id="phase-heading" tabindex="-1">
+          {{
+            state().phase === 'won' ? 'Hai conquistato il tavolo!' : 'Questa volta non è bastato.'
+          }}
+        </h1>
+        <p class="ending-copy">
+          @if (state().phase === 'won') {
+            Hai superato tutte e otto le ante. Il mazzo non dimenticherà questa partita.
+          } @else {
+            Hai totalizzato {{ state().roundScore }} punti nell'anta {{ state().round }}. Ogni nuova
+            mano è una nuova possibilità.
+          }
+        </p>
+        <button class="button button-primary button-large" type="button" (click)="startNewGame()">
+          Gioca ancora <span aria-hidden="true">→</span>
+        </button>
+      </section>
+    }
+  </main>
+
+  <footer class="page-footer">
+    <span>SEME <span aria-hidden="true">&</span> FIORI</span>
+    <span>Quattro semi, infinite fioriture.</span>
+  </footer>
+</div>
+
+<dialog #helpDialog class="help-dialog" aria-labelledby="help-heading" (close)="onHelpClosed()">
+  <div class="dialog-content">
+    <div class="dialog-heading">
+      <div>
+        <p class="eyebrow">GIOCA SENZA MOUSE</p>
+        <h2 id="help-heading">Tasti utili</h2>
+      </div>
+      <button
+        class="button button-quiet close-button"
+        type="button"
+        aria-label="Chiudi l'aiuto"
+        (click)="closeHelp()"
+      >
+        ×
+      </button>
+    </div>
+    <dl class="shortcut-list">
+      <div>
+        <dt>Frecce</dt>
+        <dd>Spostati tra le carte</dd>
+      </div>
+      <div>
+        <dt>Spazio</dt>
+        <dd>Seleziona o deseleziona una carta</dd>
+      </div>
+      <div>
+        <dt>D</dt>
+        <dd>Gioca le carte selezionate</dd>
+      </div>
+      <div>
+        <dt>X</dt>
+        <dd>Scarta le carte selezionate</dd>
+      </div>
+      <div>
+        <dt>O</dt>
+        <dd>Ordina da sinistra a destra, dal valore più alto al più basso</dd>
+      </div>
+      <div>
+        <dt>?</dt>
+        <dd>Apri questo aiuto</dd>
+      </div>
+      <div>
+        <dt>Esc</dt>
+        <dd>Chiudi questo aiuto</dd>
+      </div>
+    </dl>
+    <p class="dialog-note">
+      Ogni carta annuncia valore e seme. I semi hanno anche colori e simboli diversi.
+    </p>
+    <button class="button button-primary dialog-done" type="button" (click)="closeHelp()">
+      Ho capito
+    </button>
+  </div>
+</dialog>
